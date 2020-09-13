@@ -1,10 +1,26 @@
 from flask import Flask, redirect, url_for, render_template, request, session, flash
 from datetime import timedelta
 from flask_sqlalchemy import SQLAlchemy
+import pandas as pd
+import numpy as np
+import pickle 
 
 '''
 Temporary profile,m change, update, delete make
 '''
+make_prices = pd.read_csv('manufacturer_prices.txt', sep='\t')
+make_counts = pd.read_csv('manufacturer_counts.txt', sep='\t')
+color_counts = pd.read_csv('paint_color_counts.txt', sep='\t')
+color_prices = pd.read_csv('paint_color_prices.txt', sep='\t')
+condition_prices = pd.read_csv('condition_prices.txt', sep='\t')
+condition_counts = pd.read_csv('condition_counts.txt', sep='\t')
+
+data_model = None
+file_name = "model_file.p"
+with open(file_name, 'rb') as pickled:
+    x = pickle.load(pickled)
+    data_model = x['model']
+
 app = Flask(__name__)
 app.secret_key = "hello" # needed to encrypt and decrypt data
 app.config["SQLALCHEMY_DATABASE_URI"] = 'sqlite:///users.sqlite3'
@@ -22,8 +38,12 @@ class users(db.Model):
     year = db.Column("year", db.String(100))
     color = db.Column("color", db.String(100))
     condition = db.Column("condition", db.String(100))
+    prediction = db.Column("prediction", db.Float())
+    
+        
+    
 
-    def __init__(self, name, make, model, year, color, condition):
+    def __init__(self, name, make, model, year, color, condition, prediction):
             
         self.name = name
         self.make = make
@@ -31,7 +51,41 @@ class users(db.Model):
         self.year = year
         self.color = color
         self.condition = condition
-        
+        self.prediction = prediction
+
+@app.route("/predict")
+def predict():
+    
+    if "user" in session == False:
+        flash("You are not logged in!")     
+        return redirect(url_for("login"))
+    
+    user = session["user"]
+    year = str(session["year"])
+    make = str(session["make"])
+    condition = str(session["condition"])
+    paint_color = str(session["color"])
+
+    age = 2021 - int(year)
+    make_median_price = make_prices[make_prices.make == make.lower()]['price']
+    make_count = make_counts[make_counts.make == make.lower()]['count']
+    condition_median_price = condition_prices[condition_prices.condition == condition.lower()]['price']
+    condition_count = condition_counts[condition_counts.condition == condition.lower()]['count']
+    color_median_price = color_prices[color_prices.paint_color == paint_color.lower()]['price']
+    color_count = color_counts[color_counts.paint_color == paint_color.lower()]['count']
+
+    entry = [age, make_median_price, condition_median_price, color_median_price, make_count, condition_count, color_count]
+    entry = np.array(entry)
+    entry = entry.reshape(1, -1)
+    prediction = data_model.predict(entry)
+
+    found_user = users.query.filter_by(name=user).first()
+    found_user.prediction = prediction 
+    db.session.commit()
+
+    return render_template("predict.html", prediction=prediction)
+    
+
 @app.route("/")
 def home():
     return render_template("index.html", content="Testing") #
@@ -52,7 +106,7 @@ def login():
             session["color"] = found_user.color
             session["condition"] = found_user.condition     
         else:
-            usr = users(user, "", "", "", "", "")   # instantiating user
+            usr = users(user, "", "", "", "", "", 0.0)   # instantiating user
             db.session.add(usr) # staging area, not commit, roll back to previous version of database
             db.session.commit()         
         flash("Login Successful")       
@@ -96,6 +150,8 @@ def user():
             found_user.color = color 
             db.session.commit()                     
             flash("Car Properties were saved")
+
+            return redirect(url_for("predict"))
         else:
             if "make" in session and "model" in session and "year" in session and "color" in session and "condition" in session:
                 make = session["make"]

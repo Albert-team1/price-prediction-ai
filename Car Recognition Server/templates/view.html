@@ -2,6 +2,6 @@
 {% block title%}View All Users{% endblock %}
 {% block content%}
 	{% for item in values %}
-		<p>Name: {{item.name}}, Make: {{item.make}}, Model: {{item.model}}, Year: {{item.year}}, Color: {{item.color}}, Condition: {{item.condition}}</p>
+		<p>Name: {{item.name}}, Make: {{item.make}}, Model: {{item.model}}, Year: {{item.year}}, Color: {{item.color}}, Condition: {{item.condition}}, Prediction: {{item.prediction}}</p>
 	{% endfor %}
 {% endblock %}
