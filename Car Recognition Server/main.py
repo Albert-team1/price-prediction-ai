@@ -3,17 +3,34 @@ from datetime import timedelta
 from flask_sqlalchemy import SQLAlchemy
 import pandas as pd
 import numpy as np
+import tensorflow as tf
+from keras.applications.imagenet_utils import preprocess_input, decode_predictions
+from keras.models import load_model
+from keras.preprocessing import image
 import pickle 
+import os
+from werkzeug.utils import secure_filename
+from PIL import Image
+
+t = Image.open('static/uploads/car.jpg')
+MODEL_PATH = 'tmp/saved_cars_modelv2'
+
+image_model = load_model(MODEL_PATH)
 
 '''
 Temporary profile,m change, update, delete make
 '''
+
+UPLOAD_FOLDER = 'static/uploads/' 
+
 make_prices = pd.read_csv('manufacturer_prices.txt', sep='\t')
 make_counts = pd.read_csv('manufacturer_counts.txt', sep='\t')
 color_counts = pd.read_csv('paint_color_counts.txt', sep='\t')
 color_prices = pd.read_csv('paint_color_prices.txt', sep='\t')
 condition_prices = pd.read_csv('condition_prices.txt', sep='\t')
 condition_counts = pd.read_csv('condition_counts.txt', sep='\t')
+
+labels = pd.read_csv('labels.csv')
 
 data_model = None
 file_name = "model_file.p"
@@ -25,6 +42,8 @@ app = Flask(__name__)
 app.secret_key = "hello" # needed to encrypt and decrypt data
 app.config["SQLALCHEMY_DATABASE_URI"] = 'sqlite:///users.sqlite3'
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 #app.permanent_session_lifetime = timedelta(minutes=5)
 
 db = SQLAlchemy(app)
@@ -40,9 +59,6 @@ class users(db.Model):
     condition = db.Column("condition", db.String(100))
     prediction = db.Column("prediction", db.Float())
     
-        
-    
-
     def __init__(self, name, make, model, year, color, condition, prediction):
             
         self.name = name
@@ -53,13 +69,21 @@ class users(db.Model):
         self.condition = condition
         self.prediction = prediction
 
-@app.route("/predict")
-def predict():
+@app.route("/predict/<filename>")
+def predict(filename):
     
     if "user" in session == False:
         flash("You are not logged in!")     
         return redirect(url_for("login"))
     
+    car = Image.open('static/uploads/' + filename)
+    width = height = 224
+    size = (width, height)
+    car = car.resize(size)
+    img_array = np.array(car)/255.0
+    x = np.expand_dims(img_array, axis=0)
+    preds = image_model.predict(x)
+    result = str(labels.loc[(np.argmax(preds[0])), 'class'])
     user = session["user"]
     year = str(session["year"])
     make = str(session["make"])
@@ -77,13 +101,13 @@ def predict():
     entry = [age, make_median_price, condition_median_price, color_median_price, make_count, condition_count, color_count]
     entry = np.array(entry)
     entry = entry.reshape(1, -1)
-    prediction = data_model.predict(entry)
+    prediction = round(data_model.predict(entry)[0], 2)
 
     found_user = users.query.filter_by(name=user).first()
     found_user.prediction = prediction 
     db.session.commit()
 
-    return render_template("predict.html", prediction=prediction)
+    return render_template("predict.html", prediction=prediction, filename=filename, result=result)
     
 
 @app.route("/")
@@ -151,7 +175,11 @@ def user():
             db.session.commit()                     
             flash("Car Properties were saved")
 
-            return redirect(url_for("predict"))
+            file = request.files['file']
+            filename = secure_filename(file.filename)
+            file.save(os.path.join(app.config['UPLOAD_FOLDER'], filename))
+
+            return redirect(url_for("predict", filename=filename))
         else:
             if "make" in session and "model" in session and "year" in session and "color" in session and "condition" in session:
                 make = session["make"]
@@ -178,6 +206,11 @@ def logout():
     session.pop("color", None)
     # flash("You have been logged out!", "info")    # built in ones, warning info and error
     return redirect(url_for("login"))
+
+@app.route('/display/<filename>')
+def display_image(filename):
+
+    return redirect(url_for('static', filename='uploads/' + filename), code=301)    
     
 if __name__ == '__main__':
     db.create_all()

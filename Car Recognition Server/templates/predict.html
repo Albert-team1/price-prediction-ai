@@ -1,5 +1,12 @@
 {% extends "base.html" %}
 {% block title %}Predictions{% endblock %}
 {%block content%}
-<h1>This is your prediction: {{prediction}}</h1>		
+<h1>This is your prediction: {{prediction}}</h1>
+<h2>Here is your image</h2>	
+{% if filename %}
+	<div>
+		<img src="{{ url_for('display_image', filename=filename) }}"  width="224" height="224">
+	</div>
+{% endif %}	
+<h2>The model thought this was a {{result}}</h2>>
 {% endblock %}

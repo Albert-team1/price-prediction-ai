@@ -9,12 +9,13 @@
 		{% endif %}
    {% endwith %}	
 <p>Welcome, {{user}}</p>
-<form action="#" method="POST">
+<form action="#" method="POST" enctype="multipart/form-data">
 	<input type="text" name="make" placeholder="Enter Make" value="{{make if make}}"/>
 	<input type="text" name="model" placeholder="Enter Model" value="{{model if model}}"/>
 	<input type="text" name="year" placeholder="Enter Year" value="{{year if year}}"/>
 	<input type="text" name="color" placeholder="Enter Color" value="{{color if color}}"/>
 	<input type="text" name="condition" placeholder="Enter Condition" value="{{condition if condition}}"/>
+	<input type="file" name="file" autocomplete="off" required>
 	<input type="submit" value="submit"/>
 </form>
 {% endblock %}
