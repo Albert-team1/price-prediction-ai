@@ -1,3 +1,4 @@
+<!--This is the prediction page-->
 {% extends "base.html" %}
 {% block title %}Predictions{% endblock %}
 {%block content%}
@@ -8,5 +9,5 @@
 		<img src="{{ url_for('display_image', filename=filename) }}"  width="224" height="224">
 	</div>
 {% endif %}	
-<h2>The model thought this was a {{result}}</h2>>
+
 {% endblock %}
