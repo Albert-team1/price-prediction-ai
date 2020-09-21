@@ -28,37 +28,12 @@ with open(file_name, 'rb') as pickled:
     data_model = x['model']
 
 app = Flask(__name__)
-app.secret_key = "hello" # needed to encrypt and decrypt data
+app.secret_key = "hello"
 app.config["SQLALCHEMY_DATABASE_URI"] = 'sqlite:///users.sqlite3'
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
-#app.permanent_session_lifetime = timedelta(minutes=5)
 
-'''
-db = SQLAlchemy(app)
-# close browser, session data is deleted
-class users(db.Model):
-    
-    _id = db.Column("id", db.Integer, primary_key=True)    # needs to have primary key, unique identifier
-    name = db.Column("name", db.String(100)) # if name is not defined in first parameter, use variable name
-    make = db.Column("make", db.String(100)) # probably the case do quick sql alchemy tutorial
-    model = db.Column("model", db.String(100))
-    year = db.Column("year", db.String(100))
-    color = db.Column("color", db.String(100))
-    condition = db.Column("condition", db.String(100))
-    prediction = db.Column("prediction", db.Float())
-    
-    def __init__(self, name, make, model, year, color, condition, prediction):
-            
-        self.name = name
-        self.make = make
-        self.model = model
-        self.year = year
-        self.color = color
-        self.condition = condition
-        self.prediction = prediction
-'''
 @app.route("/predict/<filename>")
 def predict(filename):
     
@@ -89,11 +64,7 @@ def predict(filename):
     entry = entry.reshape(1, -1)
     prediction = round(data_model.predict(entry)[0])
 
-    '''
-    found_user = users.query.filter_by(name=user).first()
-    found_user.prediction = prediction 
-    db.session.commit()
-    '''
+  
     return render_template("predict.html", prediction=prediction, filename=filename)
     
 
