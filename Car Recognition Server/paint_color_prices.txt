@@ -1,0 +1,13 @@
+paint_color	price	
+white	12990.0
+grey	9988.0
+black	11995.0
+green	6700.0
+blue	8900.0
+silver	9250.0
+brown	8500.0
+red	9995.0
+custom	9995.0
+orange	13590.0
+yellow	9995.0
+purple	6988.0

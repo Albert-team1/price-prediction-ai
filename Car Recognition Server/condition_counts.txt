@@ -1,0 +1,7 @@
+condition	count	
+like new	27592.0
+excellent	118422.0
+good	93968.0
+fair	6969.0
+new	1342.0
+salvage	699.0

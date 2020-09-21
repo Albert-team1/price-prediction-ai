@@ -1,0 +1,7 @@
+condition	price	
+like new	11900.0
+excellent	9490.0
+good	9500.0
+fair	2500.0
+new	14937.5
+salvage	1500.0
