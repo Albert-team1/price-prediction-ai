@@ -4,9 +4,14 @@ from flask import Flask, redirect, url_for, render_template, request, session, f
 import pandas as pd
 import numpy as np
 #import tensorflow as tf
-
+#from keras.preprocessing import image
+#import tensorflow as tf
 import pickle 
 import os
+from keras.preprocessing import image
+import tensorflow as tf
+#from PIL import Image
+import json
 from werkzeug.utils import secure_filename
 
 
@@ -19,7 +24,7 @@ color_prices = pd.read_csv('paint_color_prices.txt', sep='\t')
 condition_prices = pd.read_csv('condition_prices.txt', sep='\t')
 condition_counts = pd.read_csv('condition_counts.txt', sep='\t')
 
-labels = pd.read_csv('labels.csv')
+#labels = pd.read_csv('labels.csv')
 
 data_model = None
 file_name = "model_file.p"
@@ -34,6 +39,44 @@ app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
 
+def get_image_model_result():
+
+    f = open('out.txt', 'w')
+    p = open('preds.txt', 'w')
+    IMAGE_SHAPE = (224, 224)
+
+    #grace_hopper = tf.keras.utils.get_file('car.jpg', "https://media.wired.com/photos/5d09594a62bcb0c9752779d9/master/w_2560%2Cc_limit/Transpo_G70_TA-518126.jpg")
+    grace_hopper = image.load_img('car.png', target_size=(224, 224))
+
+    #print(np.array(grace_hopper).shape)
+    grace_hopper = np.array(grace_hopper)
+    f.write('Shape: ' + str(grace_hopper.shape))
+    #print(grace_hopper[0][0])
+    grace_hopper = np.true_divide(grace_hopper, 255)
+    eater = tf.expand_dims(grace_hopper,0)
+    #eater = np.float32(eater[:,:,:,3])
+    #print(grace_hopper.shape)
+    data = json.dumps({"signature_name": "serving_default", "instances": eater.numpy().tolist()})
+    f.write(data)
+    f.close()
+    #print(type(data))
+    import requests
+    import matplotlib.pyplot as plt
+
+    labels = pd.read_csv('labels.csv')
+
+    headers = {"content-type": "application/json"}
+    json_response = requests.post('http://50.116.19.225:8501/v1/models/saved_cars_modelv2:predict', data=data, headers=headers)
+    json_text = json.loads(json_response.text)
+    #print(json_text)
+    predictions = json.loads(json_response.text)['predictions']
+    p.write(str(predictions[0]))
+    p.close()
+    f.close()
+    print('received predictions')
+    print('The model thought this was a {}'.format(labels.loc[(np.argmax(predictions[0])), 'class']))
+
+
 @app.route("/predict/<filename>")
 def predict(filename):
     
@@ -44,7 +87,8 @@ def predict(filename):
     '''
     PLEASE ADD TF MODEL REQUEST CODE HERE
     '''
- 
+    
+    result = get_image_model_result()
     user = session["user"]
     year = str(session["year"])
     make = str(session["make"])
